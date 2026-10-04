@@ -63,6 +63,32 @@
       </tbody>
     </table>
 
+    <section class="reminder-panel">
+      <h3>检查站提醒 · 值勤待交接</h3>
+      <p class="panel-hint">提醒直接取自值勤排班的待交接班次，与排班、交接记录同次落库；交接完成后提醒即消失。</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>排班编号</th><th>值勤日期</th><th>值勤时段</th><th>值勤岗位</th><th>当前值勤人</th><th>提醒类型</th><th>更新时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in reminders" :key="item.dutyId">
+            <td>{{ item.排班编号 }}</td>
+            <td>{{ item.值勤日期 || '—' }}</td>
+            <td>{{ item.值勤时段 }}</td>
+            <td>{{ item.值勤岗位 }}</td>
+            <td>{{ item.当前值勤人 }}</td>
+            <td>{{ item.提醒类型 }}</td>
+            <td>{{ item.更新时间 }}</td>
+          </tr>
+          <tr v-if="!reminders.length">
+            <td colspan="7" class="empty-state">暂无待交接提醒</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <footer class="page-foot">
       <span>共 {{ total }} 条防火检查站记录</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
@@ -73,13 +99,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
+import { listCheckpointReminders } from '@/api/duty-service'
 import {
   downloadEntries,
   listEntries,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
+import type { DutyReminder, EntryRow } from '@/data/types'
 
 const meta = moduleMeta('checkpoint')
 const columns = ["站点编号", "站点位置", "值守人员", "检查项目", "通行车辆数", "收缴火种数", "值班日期", "运行状态"]
@@ -89,6 +116,7 @@ const stats = [{"label": "站点总数", "value": 0}, {"label": "正常检查数
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
+const reminders = ref<DutyReminder[]>([])
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
@@ -128,6 +156,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    reminders.value = listCheckpointReminders()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '防火检查站列表读取失败'
   }
@@ -135,3 +164,15 @@ function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.reminder-panel {
+  margin-top: 18px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.reminder-panel h3 { margin: 0 0 4px; font-size: 15px; }
+.panel-hint { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+</style>

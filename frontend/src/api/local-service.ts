@@ -29,6 +29,11 @@ export function listEntries(key: string, filters: Record<string, string> = {}): 
 }
 
 export function runAction(key: string, id: number, action: string): ActionResult {
+  // 值勤排班有独立的生命周期与事务（排班/交接记录/检查站提醒同次落库），
+  // 不走通用状态机，避免再次出现状态回退、接班人不更新的问题。
+  if (key === 'duty') {
+    return { ok: false, message: '值勤排班请使用值勤页面的专用操作入口' }
+  }
   const meta = moduleMeta(key)
   const target = meta.actionTargets[action]
   if (!target) {
@@ -87,7 +92,7 @@ export function downloadEntries(key: string): void {
 export function loadOverview(): OverviewResult {
   const rows = allRows()
   const modules = [...MODULE_BY_KEY.values()].map((meta) => {
-    const entries = rows[meta.key] ?? []
+    const entries = (rows[meta.key] ?? []) as EntryRow[]
     return {
       name: meta.name,
       created: entries.length,
