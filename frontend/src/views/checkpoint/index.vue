@@ -24,6 +24,27 @@
       </span>
     </p>
 
+    <!-- 检查站待交接提醒：数据由值勤排班派生并与排班同事务落库，排班列表/交接面板看到的内容一致 -->
+    <div class="reminder-panel">
+      <h3>待交接提醒</h3>
+      <table class="data-table compact" v-if="reminders.length">
+        <thead>
+          <tr><th>排班编号</th><th>值班日期</th><th>值勤岗位</th><th>值勤人员</th><th>接班人员</th><th>提醒内容</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in reminders" :key="`reminder-${String(row.id)}`">
+            <td>{{ row['排班编号'] }}</td>
+            <td>{{ row['值班日期'] }}</td>
+            <td>{{ row['值勤岗位'] }}</td>
+            <td>{{ row['值勤人员'] }}</td>
+            <td>{{ row['接班人员'] ? row['接班人员'] : '尚未指派' }}</td>
+            <td>{{ row['提醒内容'] }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else class="empty-inline">暂无待交接提醒</p>
+    </div>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -79,6 +100,7 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { listHandoverReminders } from '@/api/duty-service'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('checkpoint')
@@ -88,6 +110,7 @@ const statuses = ["正常检查", "临时关闭", "升级检查", "等待换岗"
 const stats = [{"label": "站点总数", "value": 0}, {"label": "正常检查数", "value": 0}, {"label": "收缴火种数", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+const reminders = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -128,6 +151,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    reminders.value = listHandoverReminders()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '防火检查站列表读取失败'
   }
@@ -135,3 +159,27 @@ function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.reminder-panel {
+  border: 1px solid var(--border-color, #d8dee6);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: #fff;
+}
+
+.reminder-panel h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.data-table.compact {
+  font-size: 13px;
+}
+
+.empty-inline {
+  margin: 8px 0;
+  color: #8a94a6;
+}
+</style>
